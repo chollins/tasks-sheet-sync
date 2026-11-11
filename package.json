@@ -3,6 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "description": "Bidirectional Google Tasks and Google Sheets synchronization with Google Apps Script",
-  "scripts": { "test": "node --test", "check": "node --check src/Core.js && node --check src/Api.js && node --check src/Sheets.js && node --check src/Sync.js && node --check src/Menu.js" },
-  "engines": { "node": ">=20" }
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/Core.js && node --check src/Api.js && node --check src/Sheets.js && node --check src/Sync.js && node --check src/Menu.js && node --check scripts/clasp-config.js",
+    "clasp:setup": "node scripts/clasp-config.js setup",
+    "clasp:check": "node scripts/clasp-config.js check",
+    "clasp:login": "clasp login",
+    "clasp:status": "npm run clasp:check && clasp show-file-status",
+    "clasp:open": "npm run clasp:check && clasp open-script",
+    "deploy": "npm run check && npm test && npm run clasp:check && clasp push"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@google/clasp": "3.4.1"
+  }
 }

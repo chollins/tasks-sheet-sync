@@ -51,18 +51,52 @@ No web-app deployment, API key, or external server is needed.
 
 No live Google data is modified merely by installing the files or running setup. **Sync now** imports existing tasks and applies any edits already present in the Tasks tab.
 
-### Optional clasp workflow
+### Deploy with clasp (recommended)
 
-If you already use Google's `clasp` CLI, create a bound script through the Sheet first, then create an ignored `.clasp.json` at the repository root:
+This replaces manual copying of source files in installation steps 3–4. Use Node.js 20+; clasp is pinned as a local development dependency, so a global installation is unnecessary.
 
-```json
-{
-  "scriptId": "YOUR_BOUND_SCRIPT_ID",
-  "rootDir": "src"
-}
-```
+1. Create the Sheet and its **bound** script through **Extensions → Apps Script**. In Apps Script **Project Settings**, copy the **Script ID** (not the spreadsheet ID).
+2. From your cloned repository, run:
 
-Authenticate using your own Google account, enable the Apps Script API if requested by clasp, and run `clasp push`. The script ID is in Apps Script Project Settings. Do not commit authentication files. The source directory is the upload root; only its JavaScript and manifest files are needed. The manual installation above requires no CLI dependencies.
+   ```sh
+   npm ci
+   npm run clasp:setup
+   ```
+
+   This copies [`.clasp.json.example`](.clasp.json.example) to the ignored `.clasp.json`. Replace `YOUR_BOUND_SCRIPT_ID` in that file with your Script ID. Keep `rootDir` as `src`. You can also supply the ID directly: `npm run clasp:setup -- YOUR_SCRIPT_ID`. Setup refuses to overwrite an existing configuration.
+
+3. Enable the **Google Apps Script API** at [Apps Script user settings](https://script.google.com/home/usersettings). Then authenticate and preview the upload:
+
+   ```sh
+   npm run clasp:login
+   npm run clasp:status
+   ```
+
+   Sign in using the Google account that owns the Sheet. The preview should contain exactly `Api.js`, `Core.js`, `Menu.js`, `Sheets.js`, `Sync.js`, and `appsscript.json` beneath `src/`. Documentation, tests, deployment helpers, and local configuration are outside the upload root.
+
+4. Upload and open the script:
+
+   ```sh
+   npm run deploy
+   npm run clasp:open
+   ```
+
+   `deploy` runs syntax checks, all tests, and configuration validation before `clasp push`. It updates the target script's source, so use a dedicated bound project; remote-only source files can be removed. It does not run synchronization or modify task data. No web-app deployment or deployment ID is needed.
+
+5. Complete installation steps **5–8** above: enable the **Google Tasks API** for the project's Cloud project, run `setupTasksSync` in the Apps Script editor, authorize the application, reload the Sheet, and test with disposable tasks. The Apps Script API used by clasp and the Google Tasks API used by this application are separate prerequisites. Clasp login does not replace the application's first-run authorization.
+
+For later updates, run `git pull --ff-only`, `npm ci`, then `npm run deploy`. Reload the Sheet afterward. Avoid editing the same source in both the browser and Git; copy any browser-only changes back before pushing. Leave scheduling disabled until your initial live smoke test passes.
+
+| Command | Purpose |
+| --- | --- |
+| `npm run clasp:setup` | Create your local `.clasp.json` without overwriting it |
+| `npm run clasp:login` | Authenticate clasp with Google |
+| `npm run clasp:check` | Validate the Script ID format and upload root locally |
+| `npm run clasp:status` | Preview files; no remote writes |
+| `npm run deploy` | Run checks/tests, validate configuration, and push source |
+| `npm run clasp:open` | Open the target script in the browser |
+
+Configuration validation catches placeholders and malformed IDs; it cannot verify that an ID belongs to the intended spreadsheet. Check the target in Apps Script before your first push. `.clasp.json` and `.clasprc.json` are ignored by Git. Do not commit OAuth credentials. The manual installation requires no npm installation.
 
 ## Daily use
 
@@ -114,7 +148,7 @@ The baseline advances only after a confirmed result. After a move, the returned 
 
 ## Development
 
-Node.js 20+ is sufficient; no npm dependencies are required.
+Node.js 20+ is sufficient for the tests; deployment uses the pinned clasp development dependency.
 
 ```sh
 npm run check
