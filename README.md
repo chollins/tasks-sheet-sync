@@ -51,7 +51,13 @@ No web-app deployment, API key, or external server is needed.
 
 No live Google data is modified merely by installing the files or running setup. **Sync now** imports existing tasks and applies any edits already present in the Tasks tab.
 
-### Deploy with clasp (recommended)
+### Deploy from GitHub Actions
+
+Use **Actions → Deploy to Apps Script → Run workflow**, selecting `main`. The workflow tests the code before using repository secrets to push to your existing bound script. Your Script ID and OAuth credentials are never committed, and temporary credential files are deleted after the upload.
+
+Complete the short [GitHub deployment setup guide](docs/GITHUB_DEPLOYMENT.md) once to authorize Google and add the two repository secrets. This workflow runs manually; ordinary commits and pull requests do not deploy.
+
+### Deploy locally with clasp
 
 This replaces manual copying of source files in installation steps 3–4. Use Node.js 20+; clasp is pinned as a local development dependency, so a global installation is unnecessary.
 

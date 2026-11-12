@@ -5,7 +5,7 @@
   "description": "Bidirectional Google Tasks and Google Sheets synchronization with Google Apps Script",
   "scripts": {
     "test": "node --test",
-    "check": "node --check src/Core.js && node --check src/Api.js && node --check src/Sheets.js && node --check src/Sync.js && node --check src/Menu.js && node --check scripts/clasp-config.js",
+    "check": "node --check src/Core.js && node --check src/Api.js && node --check src/Sheets.js && node --check src/Sync.js && node --check src/Menu.js && node --check scripts/clasp-config.js && node --check scripts/ci-deploy.js",
     "clasp:setup": "node scripts/clasp-config.js setup",
     "clasp:check": "node scripts/clasp-config.js check",
     "clasp:login": "clasp login",
