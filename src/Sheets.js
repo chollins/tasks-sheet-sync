@@ -43,7 +43,10 @@ var TaskSyncSheets = (function () {
   }
   function refreshLists(remote) {
     var s = book().getSheetByName(names.lists), old = {};
-    if (s.getLastRow() > 1) s.getRange(2, 1, s.getLastRow() - 1, 3).getValues().forEach(function (r) { old[r[2]] = r[0] === true; });
+    if (s.getLastRow() > 1) s.getRange(2, 1, s.getLastRow() - 1, 3).getValues().forEach(function (r) {
+      // Migrate text booleans written by older versions without resetting choices.
+      old[r[2]] = r[0] === true || (typeof r[0] === 'string' && r[0].trim().toLowerCase() === 'true');
+    });
     var counts = {};
     remote.forEach(function (l) { counts[l.title] = (counts[l.title] || 0) + 1; });
     var lists = remote.map(function (l) {
@@ -51,8 +54,11 @@ var TaskSyncSheets = (function () {
     });
     if (s.getLastRow() > 1) s.getRange(2, 1, s.getLastRow() - 1, 3).clearContent().clearDataValidations();
     if (lists.length) {
-      s.getRange(2, 1, lists.length).insertCheckboxes();
-      values(s.getRange(2, 1, lists.length, 3), lists.map(function (l) { return [l.enabled, l.label, l.id]; }));
+      // Do not use the literal-text helper for checkbox cells: plain-text
+      // formatting turns booleans into strings, which fail checkbox validation.
+      s.getRange(2, 1, lists.length).setNumberFormat('General').insertCheckboxes()
+        .setValues(lists.map(function (l) { return [l.enabled]; }));
+      values(s.getRange(2, 2, lists.length, 2), lists.map(function (l) { return [l.label, l.id]; }));
     }
     var enabled = lists.filter(function (l) { return l.enabled; });
     if (!enabled.length) throw new Error('Enable at least one list on the Task Lists tab.');
