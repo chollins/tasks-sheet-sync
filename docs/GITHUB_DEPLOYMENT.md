@@ -62,7 +62,7 @@ Merge/push your code to `main`, then run **Deploy to Apps Script** again. Commit
 
 - **Secret validation error:** Check names, use the complete JSON file from clasp v3 login, and ensure its `tokens.default` entry includes a refresh token. No secret contents are echoed by validation.
 - **Push failed:** Verify the Script ID, enable the Apps Script API, and check that the authorizing Google account can edit the bound project. If credentials expired or were revoked, rerun the login command and replace `CLASP_CREDENTIALS`.
-- **Need more diagnostics:** Run local clasp with your local configuration and Google login. CI deliberately suppresses raw clasp output to keep private identifiers out of public workflow logs.
+- **Need more diagnostics:** Recognized failures produce fixed guidance about OAuth, API access, or configuration without echoing private output. For other failures, run local clasp with your local configuration and Google login. CI deliberately suppresses raw clasp output to keep private identifiers out of public workflow logs.
 - **Wrong branch:** Deployments only run when dispatched on `main`.
 
 OAuth credentials authorize access beyond just knowing the Script ID. Only trusted repository writers should be able to change code/workflows that receive these secrets. For optional approval gates, create an `apps-script` GitHub environment with a required reviewer (where your plan supports it), add `environment: apps-script` to the `deploy` job, and move both secrets to that environment. The integration could not configure environments, and the default workflow does not require one.

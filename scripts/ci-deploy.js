@@ -23,6 +23,20 @@ function readSecrets(env) {
   return { scriptId, credentials: { tokens: { default: token } } };
 }
 
+function failureMessage(result) {
+  const output = String(result.stderr || '') + '\n' + String(result.stdout || '');
+  const prefix = 'clasp push failed: ';
+  if (/escapes project root|outside the project root/i.test(output)) return prefix + 'invalid staging-directory layout.';
+  if (/invalid_grant|invalid_rapt/i.test(output)) return prefix + 'Google rejected the refresh token. Log in again and replace CLASP_CREDENTIALS.';
+  if (/invalid_client|unauthorized_client/i.test(output)) return prefix + 'Google rejected the OAuth client credentials. Replace CLASP_CREDENTIALS using the documented login command.';
+  if (/ACCESS_TOKEN_SCOPE_INSUFFICIENT|insufficient.*scope/i.test(output)) return prefix + 'the Google authorization lacks upload scopes. Log in again without --use-project-scopes.';
+  if (/accessNotConfigured|SERVICE_DISABLED|has not been used|API.*disabled/i.test(output)) return prefix + 'enable the Google Apps Script API for the authorizing account/project.';
+  if (/Requested entity was not found|404|script.*not found/i.test(output)) return prefix + 'check APPS_SCRIPT_ID identifies the intended bound project.';
+  if (/PERMISSION_DENIED|403|permission/i.test(output)) return prefix + 'check that the authorizing Google account can edit the bound project and has Apps Script API access.';
+  if (result.error && result.error.code === 'ETIMEDOUT') return prefix + 'the upload timed out. Check the target project before retrying.';
+  return prefix + 'upload did not complete. Check Script ID, API access, account permissions, and refresh-token validity. See docs/GITHUB_DEPLOYMENT.md.';
+}
+
 function deploy(root, env = process.env, run = spawnSync) {
   const secrets = readSecrets(env);
   const folder = fs.mkdtempSync(path.join(env.RUNNER_TEMP || os.tmpdir(), 'tasks-clasp-'));
@@ -30,7 +44,10 @@ function deploy(root, env = process.env, run = spawnSync) {
     fs.chmodSync(folder, 0o700);
     const config = path.join(folder, '.clasp.json');
     const auth = path.join(folder, '.clasprc.json');
-    fs.writeFileSync(config, JSON.stringify({ scriptId: secrets.scriptId, rootDir: path.join(root, 'src') }), { mode: 0o600 });
+    // clasp v3 requires content to be inside the config's project directory.
+    // Stage a copy rather than pointing a temporary config at the checkout.
+    fs.cpSync(path.join(root, 'src'), path.join(folder, 'src'), { recursive: true });
+    fs.writeFileSync(config, JSON.stringify({ scriptId: secrets.scriptId, rootDir: 'src' }), { mode: 0o600 });
     fs.writeFileSync(auth, JSON.stringify(secrets.credentials), { mode: 0o600 });
     const childEnv = { ...env, DEBUG: '' };
     delete childEnv.APPS_SCRIPT_ID;
@@ -39,9 +56,9 @@ function deploy(root, env = process.env, run = spawnSync) {
     // private Script ID or authentication details. No credential artifacts/logs.
     const result = run(process.execPath, [path.join(root, 'node_modules', '@google', 'clasp', 'build', 'src', 'index.js'),
       '--auth', auth, '--project', config, 'push', '--force'],
-    { cwd: root, env: childEnv, encoding: 'utf8', timeout: 180000, maxBuffer: 1024 * 1024 });
+    { cwd: folder, env: childEnv, encoding: 'utf8', timeout: 180000, maxBuffer: 1024 * 1024 });
     if (result.error || result.status !== 0) {
-      throw new Error('clasp push failed. Check the Script ID, Apps Script API access, account permissions, and refresh-token validity. See docs/GITHUB_DEPLOYMENT.md.');
+      throw new Error(failureMessage(result));
     }
   } finally {
     fs.rmSync(folder, { recursive: true, force: true });
@@ -57,4 +74,4 @@ if (require.main === module) {
     process.exitCode = 1;
   }
 }
-module.exports = { readSecrets, deploy };
+module.exports = { readSecrets, deploy, failureMessage };
